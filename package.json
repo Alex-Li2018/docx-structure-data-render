@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "build:dev": "cross-env NODE_ENV=development rollup --config ./build/rollup.config.js",
-    "build:pro": "cross-env NODE_ENV=production rollup --config ./build/rollup.config.js"
+    "build:pro": "cross-env NODE_ENV=production rollup --config ./build/rollup.config.js",
+    "build:test": "cross-env NODE_ENV=test rollup --config ./build/rollup.config.js"
   },
   "repository": {
     "type": "git",

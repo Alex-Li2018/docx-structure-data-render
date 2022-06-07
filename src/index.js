@@ -12,9 +12,7 @@ import RenderNumbering from './render/numbering'
 import RenderFontTable from './render/fontTable'
 import RenderBody from './render/body'
 
-import backJSON from './back'
-
-class HtmlRenderer {
+export default class HtmlRenderer {
     constructor(htmlDocument) {
         this.htmlDocument = htmlDocument;
     }
@@ -101,17 +99,3 @@ class HtmlRenderer {
 		return createElement("div", { className: `${this.className}-wrapper` }, children);
 	}
 }
-
-function arrayToObject(data) {
-    const obj = {}
-
-    for(let key of data) {
-        obj[key.type] = key
-    }
-
-    return obj
-}
-
-// 测试
-new HtmlRenderer(window.document)
-.render(arrayToObject(backJSON.data), document.getElementById('docx'), null, { className: 'docx' })

@@ -72,3 +72,7 @@ export function mergeDeep(target, ...sources) {
 
     return mergeDeep(target, ...sources);
 }
+
+export function pt2pt() {
+    
+}

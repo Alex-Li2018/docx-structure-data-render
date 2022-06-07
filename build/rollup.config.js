@@ -11,7 +11,7 @@ if (process.env.NODE_ENV === 'production') {
 
 export default {
     // 核心选项
-    input: './src/index.js',     // 必须
+    input: process.env.NODE_ENV === 'test' ? './src/index.js' : './test/test.js',     // 必须
     output: {
         file,
         format: 'umd',
