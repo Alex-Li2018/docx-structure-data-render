@@ -1,0 +1,31 @@
+const DomType = {
+    Document: "document",
+    Paragraph: "paragraph",
+    Run: "run",
+    Break: "break",
+    NoBreakHyphen: "noBreakHyphen",
+    Table: "table",
+    Row: "row",
+    Cell: "cell",
+    Hyperlink: "hyperlink",
+    Drawing: "drawing",
+    Image: "image",
+    Text: "text",
+    Tab: "tab",
+    Symbol: "symbol",
+    BookmarkStart: "bookmarkStart",
+    BookmarkEnd: "bookmarkEnd",
+    Footer: "footer",
+    Header: "header",
+    FootnoteReference: "footnoteReference", 
+	EndnoteReference: "endnoteReference",
+    Footnote: "footnote",
+    Endnote: "endnote",
+    SimpleField: "simpleField",
+    ComplexField: "complexField",
+    Instruction: "instruction",
+	VmlPicture: "vmlPicture",
+	VmlShape: "vmlShape"
+}
+
+export default DomType

@@ -10,27 +10,13 @@ import RenderTheme from './render/theme'
 import RenderStyle from './render/style'
 import RenderNumbering from './render/numbering'
 import RenderFontTable from './render/fontTable'
+import RenderBody from './render/body'
 
 import backJSON from './back'
 
 class HtmlRenderer {
     constructor(htmlDocument) {
         this.htmlDocument = htmlDocument;
-        this.footnoteMap = {};
-        this.endnoteMap = {};
-        this.defaultTabSize = []
-        // this.styleMap = {};
-        // this.currentPart = null;
-        // this.tableVerticalMerges = [];
-        // this.currentVerticalMerge = null;
-        // this.tableCellPositions = [];
-        // this.currentCellPosition = null;
-        
-        // this.currentEndnoteIds = [];
-        // this.usedHederFooterParts = [];
-        // this.currentTabs = [];
-        // this.tabsTimeout = 0;
-        // this.createElement = createElement;
     }
 
     /**
@@ -46,13 +32,16 @@ class HtmlRenderer {
         }
 
         styleContainer = styleContainer || bodyContainer;
-
         const className = options.className || 'docx';
+        let styleMap = null, 
+            footnoteMap = null, 
+            endnoteMap = null,
+            defaultTabSize = [];
 
         removeAllElements(styleContainer);
         removeAllElements(bodyContainer);
         appendComment(styleContainer, "docxjs library predefined styles");
-        styleContainer.appendChild(renderDefaultStyle());
+        styleContainer.appendChild(renderDefaultStyle(className));
 
         // 渲染主题
         if (document.themePart) {
@@ -61,7 +50,7 @@ class HtmlRenderer {
 
         // 渲染style part
         if (document.stylesPart != null) {
-            new RenderStyle(document.stylesPart, options).render(styleContainer)
+            styleMap = new RenderStyle(document.stylesPart, options).render(styleContainer)
         }
 
         // 编号
@@ -69,26 +58,34 @@ class HtmlRenderer {
 			new RenderNumbering(document.numberingPart).render(styleContainer)
 		}
 
-        // 页眉
+        // 脚注
         if (document.footnotesPart) {
-            this.footnoteMap = keyBy(document.footnotesPart.notes, x => x.id);
+            footnoteMap = keyBy(document.footnotesPart.notes, x => x.id);
         }
 
-        // 页脚
+        // 尾注
         if (document.endnotesPart) {
-            this.endnoteMap = keyBy(document.endnotesPart.notes, x => x.id);
+            endnoteMap = keyBy(document.endnotesPart.notes, x => x.id);
         }
 
         // 设置
         if (document.settingsPart) {
-            this.defaultTabSize = document.settingsPart.props && document.settingsPart.props.defaultTabStop ? document.settingsPart.props.defaultTabStop : null;
+            defaultTabSize = document.settingsPart.props && document.settingsPart.props.defaultTabStop ? document.settingsPart.props.defaultTabStop : null;
         }
 
+        // 字体样式合集
         if (!options.ignoreFonts && document.fontTablePart) {
             new RenderFontTable(document.fontTablePart).render(styleContainer);
         }
 
-        // const sectionElements = this.renderSections(document.documentPart.body);
+        const sectionElements = new RenderBody(
+            document.documentPart.props, 
+            options, 
+            styleMap,
+            footnoteMap,
+            endnoteMap,
+            defaultTabSize
+        ).render();
 
         // if (this.options.inWrapper) {
         //     bodyContainer.appendChild(this.renderWrapper(sectionElements));

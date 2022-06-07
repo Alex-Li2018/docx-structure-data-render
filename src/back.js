@@ -3,7 +3,7 @@ export default {
     "data": [
         {
             "type": "documentPart",
-            "body": {
+            "props": {
                 "type": "document",
                 "children": [
                     {

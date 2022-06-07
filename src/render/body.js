@@ -1,27 +1,79 @@
-class RenderBody {
-    constructor() {
+import {
+    createElement,
+} from '../utils'
+import DomType from './domType'
+import BasePart from "../basePart";
 
+class RenderBody extends BasePart  {
+    constructor(document, options, styleMap, footnoteMap, endnoteMap, defaultTabSize) {
+		super()
+
+		this.document = document
+		this.currentPart = null;
+        this.tableVerticalMerges = [];
+        this.currentVerticalMerge = null;
+        this.tableCellPositions = [];
+        this.currentCellPosition = null;
+        
+        this.currentEndnoteIds = [];
+        this.usedHederFooterParts = [];
+        this.currentTabs = [];
+        this.tabsTimeout = 0;
+        this.createElement = createElement;
+		this.options = {
+			breakPages: true,
+			className: "docx",
+			ignoreFonts: false,
+			ignoreHeight: false,
+			ignoreLastRenderedPageBreak: true,
+			ignoreWidth: false,
+			inWrapper: true,
+			renderEndnotes: true,
+			renderFooters: true,
+			renderFootnotes: true,
+			renderHeaders: true,
+			trimXmlDeclaration: true,
+			useBase64URL: false,
+			...options
+		} 
+
+		this.className = this.options.className || 'docx'
+
+		this.styleMap = styleMap
+		this.footnoteMap = footnoteMap
+		this.endnoteMap = endnoteMap
+		this.defaultTabSize = defaultTabSize
     }
 
-    renderSections(document) {
+    render() {
 		const result = [];
-
-		this.processElement(document);
-		const sections = this.splitBySection(document.children);
+		// 遍历元素处理表格 处理父元素节点
+		this.processElement(this.document);
+		// 分页 一页一个section
+		const sections = this.splitBySection(this.document.children);
 		let prevProps = null;
 
 		for (let i = 0, l = sections.length; i < l; i++) {
 			this.currentFootnoteIds = [];
 
 			const section = sections[i];
-			const props = section.sectProps || document.props;
+			const props = section.sectProps || this.document.props;
+			// 创建当前页
 			const sectionElement = this.createSection(this.className, props);
-			this.renderStyleValues(document.cssStyle, sectionElement);
+			// 渲染word解析出来的样式
+			this.renderStyleValues(this.document.cssStyle, sectionElement);
 
-			this.options.renderHeaders && this.renderHeaderFooter(props.headerRefs, props,
-				result.length, prevProps != props, sectionElement);
+			// 页眉页脚
+			this.options.renderHeaders && this.renderHeaderFooter(
+				props.headerRefs, 
+				props,
+				result.length, 
+				prevProps != props, 
+				sectionElement
+			);
 
 			var contentElement = this.createElement("article");
+			// 渲染当前页
 			this.renderElements(section.elements, contentElement);
 			sectionElement.appendChild(contentElement);
 
@@ -43,39 +95,94 @@ class RenderBody {
 		return result;
 	}
 
-    createSection(className, props) {
-		var elem = this.createElement("section", { className });
-
-		if (props) {
-			if (props.pageMargins) {
-				elem.style.paddingLeft = props.pageMargins.left;
-				elem.style.paddingRight = props.pageMargins.right;
-				elem.style.paddingTop = props.pageMargins.top;
-				elem.style.paddingBottom = props.pageMargins.bottom;
-			}
-
-			if (props.pageSize) {
-				if (!this.options.ignoreWidth)
-					elem.style.width = props.pageSize.width;
-				if (!this.options.ignoreHeight)
-					elem.style.minHeight = props.pageSize.height;
-			}
-
-			if (props.columns && props.columns.numberOfColumns) {
-				elem.style.columnCount = `${props.columns.numberOfColumns}`;
-				elem.style.columnGap = props.columns.space;
-
-				if (props.columns.separator) {
-					elem.style.columnRule = "1px solid black";
-				}
-			}
-		}
-
-		return elem;
-	}
-
     renderStyleValues(style, ouput) {
 		Object.assign(ouput.style, style);
+	}
+
+	renderElements(elems, into) {
+		if (elems == null)
+			return null;
+
+		var result = elems.map(e => this.renderElement(e)).filter(e => e != null);
+
+		if (into)
+			appendChildren(into, result);
+
+		return result;
+	}
+
+	renderElement(elem) {
+		switch (elem.type) {
+			// 段落
+			case DomType.Paragraph:
+				return this.renderParagraph(elem);
+			// 书签开始
+			case DomType.BookmarkStart:
+				return this.renderBookmarkStart(elem);
+			// 书签结束
+			case DomType.BookmarkEnd:
+				return null; //ignore bookmark end
+			// run标签
+			case DomType.Run:
+				return this.renderRun(elem);
+			// table
+			case DomType.Table:
+				return this.renderTable(elem);
+
+			case DomType.Row:
+				return this.renderTableRow(elem);
+
+			case DomType.Cell:
+				return this.renderTableCell(elem);
+			// 超链接
+			case DomType.Hyperlink:
+				return this.renderHyperlink(elem);
+			// 图形
+			case DomType.Drawing:
+				return this.renderDrawing(elem);
+			// 图片
+			case DomType.Image:
+				return this.renderImage(elem);
+			// 文本
+			case DomType.Text:
+				return this.renderText(elem);
+
+			case DomType.Tab:
+				return this.renderTab(elem);
+
+			case DomType.Symbol:
+				return this.renderSymbol(elem);
+
+			case DomType.Break:
+				return this.renderBreak(elem);
+
+			case DomType.Footer:
+				return this.renderContainer(elem, "footer");
+
+			case DomType.Header:
+				return this.renderContainer(elem, "header");
+			// 脚注 尾注
+			case DomType.Footnote:
+			case DomType.Endnote:
+				return this.renderContainer(elem, "li");
+
+			case DomType.FootnoteReference:
+				return this.renderFootnoteReference(elem);
+
+			case DomType.EndnoteReference:
+				return this.renderEndnoteReference(elem);
+
+			case DomType.NoBreakHyphen:
+				return this.createElement("wbr");
+
+			case DomType.VmlPicture:
+				return this.renderVmlPicture(elem);
+
+			case DomType.VmlShape:
+				return this.renderVmlShape(elem);
+		}
+
+		return null;
 	}
 
     renderHeaderFooter(refs, props, page, firstOfSection, into) {
@@ -98,18 +205,6 @@ class RenderBody {
 		}
 	}
 
-    renderElements(elems, into) {
-		if (elems == null)
-			return null;
-
-		var result = elems.map(e => this.renderElement(e)).filter(e => e != null);
-
-		if (into)
-			appendChildren(into, result);
-
-		return result;
-	}
-
     renderNotes(noteIds, notesMap, into) {
 		var notes = noteIds.map(id => notesMap[id]).filter(x => x);
 
@@ -117,79 +212,6 @@ class RenderBody {
 			var result = this.createElement("ol", null, this.renderElements(notes));
 			into.appendChild(result);
 		}
-	}
-
-    renderElement(elem) {
-		switch (elem.type) {
-			case DomType.Paragraph:
-				return this.renderParagraph(elem);
-
-			case DomType.BookmarkStart:
-				return this.renderBookmarkStart(elem);
-
-			case DomType.BookmarkEnd:
-				return null; //ignore bookmark end
-
-			case DomType.Run:
-				return this.renderRun(elem);
-
-			case DomType.Table:
-				return this.renderTable(elem);
-
-			case DomType.Row:
-				return this.renderTableRow(elem);
-
-			case DomType.Cell:
-				return this.renderTableCell(elem);
-
-			case DomType.Hyperlink:
-				return this.renderHyperlink(elem);
-
-			case DomType.Drawing:
-				return this.renderDrawing(elem);
-
-			case DomType.Image:
-				return this.renderImage(elem);
-
-			case DomType.Text:
-				return this.renderText(elem);
-
-			case DomType.Tab:
-				return this.renderTab(elem);
-
-			case DomType.Symbol:
-				return this.renderSymbol(elem);
-
-			case DomType.Break:
-				return this.renderBreak(elem);
-
-			case DomType.Footer:
-				return this.renderContainer(elem, "footer");
-
-			case DomType.Header:
-				return this.renderContainer(elem, "header");
-
-			case DomType.Footnote:
-			case DomType.Endnote:
-				return this.renderContainer(elem, "li");
-
-			case DomType.FootnoteReference:
-				return this.renderFootnoteReference(elem);
-
-			case DomType.EndnoteReference:
-				return this.renderEndnoteReference(elem);
-
-			case DomType.NoBreakHyphen:
-				return this.createElement("wbr");
-
-			case DomType.VmlPicture:
-				return this.renderVmlPicture(elem);
-
-			case DomType.VmlShape:
-				return this.renderVmlShape(elem);
-		}
-
-		return null;
 	}
 
     renderParagraph(elem) {
@@ -442,6 +464,136 @@ class RenderBody {
 
     numberingClass(id, lvl) {
 		return `${this.className}-num-${id}-${lvl}`;
+	}
+
+	findStyle(styleName) {
+		return styleName && this.styleMap?.[styleName];
+	}
+
+	splitBySection(elements) {
+		var current = { sectProps: null, elements: [] };
+		var result = [current];
+
+		for (let elem of elements) {
+			if (elem.type == DomType.Paragraph) {
+				const s = this.findStyle((elem).styleName);
+
+				if (s?.paragraphProps?.pageBreakBefore) {
+					current.sectProps = sectProps;
+					current = { sectProps: null, elements: [] };
+					result.push(current);
+				}
+			}
+
+			current.elements.push(elem);
+
+			if (elem.type == DomType.Paragraph) {
+				const p = elem;
+
+				var sectProps = p.sectionProps;
+				var pBreakIndex = -1;
+				var rBreakIndex = -1;
+
+				if (this.options.breakPages && p.children) {
+					pBreakIndex = p.children.findIndex(r => {
+						rBreakIndex = r.children?.findIndex(this.isPageBreakElement.bind(this)) ?? -1;
+						return rBreakIndex != -1;
+					});
+				}
+
+				if (sectProps || pBreakIndex != -1) {
+					current.sectProps = sectProps;
+					current = { sectProps: null, elements: [] };
+					result.push(current);
+				}
+
+				if (pBreakIndex != -1) {
+					let breakRun = p.children[pBreakIndex];
+					let splitRun = rBreakIndex < breakRun.children.length - 1;
+
+					if (pBreakIndex < p.children.length - 1 || splitRun) {
+						var children = elem.children;
+						var newParagraph = { ...elem, children: children.slice(pBreakIndex) };
+						elem.children = children.slice(0, pBreakIndex);
+						current.elements.push(newParagraph);
+
+						if (splitRun) {
+							let runChildren = breakRun.children;
+							let newRun = { ...breakRun, children: runChildren.slice(0, rBreakIndex) };
+							elem.children.push(newRun);
+							breakRun.children = runChildren.slice(rBreakIndex);
+						}
+					}
+				}
+			}
+		}
+
+		let currentSectProps = null;
+
+		for (let i = result.length - 1; i >= 0; i--) {
+			if (result[i].sectProps == null) {
+				result[i].sectProps = currentSectProps;
+			} else {
+				currentSectProps = result[i].sectProps
+			}
+		}
+
+		return result;
+	}
+
+	processElement(element) {
+		if (element.children) {
+			for (var e of element.children) {
+				e.parent = element;
+
+				if (e.type == DomType.Table) {
+					this.processTable(e);
+				} else {
+					this.processElement(e);
+				}
+			}
+		}
+	}
+
+    createSection(className, props) {
+		var elem = this.createElement("section", { className });
+
+		if (props) {
+			if (props.pageMargins) {
+				elem.style.paddingLeft = props.pageMargins.left;
+				elem.style.paddingRight = props.pageMargins.right;
+				elem.style.paddingTop = props.pageMargins.top;
+				elem.style.paddingBottom = props.pageMargins.bottom;
+			}
+
+			if (props.pageSize) {
+				if (!this.options.ignoreWidth)
+					elem.style.width = props.pageSize.width;
+				if (!this.options.ignoreHeight)
+					elem.style.minHeight = props.pageSize.height;
+			}
+
+			if (props.columns && props.columns.numberOfColumns) {
+				elem.style.columnCount = `${props.columns.numberOfColumns}`;
+				elem.style.columnGap = props.columns.space;
+
+				if (props.columns.separator) {
+					elem.style.columnRule = "1px solid black";
+				}
+			}
+		}
+
+		return elem;
+	}
+
+	isPageBreakElement(elem) {
+		if (elem.type != DomType.Break)
+			return false;
+
+		if (elem.break == "lastRenderedPageBreak")
+			return !this.options.ignoreLastRenderedPageBreak;
+
+		return elem.break == "page";
 	}
 }
 

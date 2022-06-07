@@ -1,6 +1,10 @@
 // css 变量
-export function renderDefaultStyle() {
-    const c = this.className;
+import {
+    createStyleElement,
+} from '../utils'
+
+export function renderDefaultStyle(className) {
+    const c = className;
     const styleText = `
 .${c}-wrapper { background: gray; padding: 30px; padding-bottom: 0px; display: flex; flex-flow: column; align-items: center; } 
 .${c}-wrapper>section.${c} { background: white; box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); margin-bottom: 30px; }

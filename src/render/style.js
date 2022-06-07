@@ -12,7 +12,10 @@ class RenderStyle extends BasePart {
 		super()
 		this.stylesPart = stylesPart
 		this.styleMap = null
-		this.options = options
+		this.options = {
+			debug: false,
+			...options
+		}
 		this.className = options.className
     }
 
@@ -74,8 +77,7 @@ class RenderStyle extends BasePart {
 						style.styles.push({ ...baseValues, values: { ...baseValues.values } });
 					}
 				}
-			}
-			else if (this.options.debug) {
+			} else if (this.options.debug) {
                 console.warn(`Can't find base style ${style.basedOn}`);
             }
 		}
