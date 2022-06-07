@@ -1,11 +1,12 @@
 import {
     createElement,
+	appendChildren
 } from '../utils'
 import DomType from './domType'
 import BasePart from "../basePart";
 
 class RenderBody extends BasePart  {
-    constructor(document, options, styleMap, footnoteMap, endnoteMap, defaultTabSize) {
+    constructor(document, options, styleMap, footnoteMap, endnoteMap, defaultTabSize, htmlDocument) {
 		super()
 
 		this.document = document
@@ -43,6 +44,8 @@ class RenderBody extends BasePart  {
 		this.footnoteMap = footnoteMap
 		this.endnoteMap = endnoteMap
 		this.defaultTabSize = defaultTabSize
+
+		this.htmlDocument = htmlDocument
     }
 
     render() {
@@ -218,14 +221,14 @@ class RenderBody extends BasePart  {
 		var result = this.createElement("p");
 
 		const style = this.findStyle(elem.styleName);
-		elem.tabs = style.paragraphProps && style.paragraphProps.tabs;  //TODO
+		elem.tabs = style && style.paragraphProps && style.paragraphProps.tabs ? style.paragraphProps.tabs : null;  //TODO
 
 		this.renderClass(elem, result);
 		this.renderChildren(elem, result);
 		this.renderStyleValues(elem.cssStyle, result);
 		this.renderCommonProperties(result.style, elem);
 
-		const numbering = elem.numbering || (style.paragraphProps && style.paragraphProps.numbering ? style.paragraphProps.numbering : null);
+		const numbering = elem.numbering || (style && style.paragraphProps && style.paragraphProps.numbering ? style.paragraphProps.numbering : null);
 
 		if (numbering) {
 			result.classList.add(this.numberingClass(numbering.id, numbering.level));
@@ -478,7 +481,7 @@ class RenderBody extends BasePart  {
 			if (elem.type == DomType.Paragraph) {
 				const s = this.findStyle((elem).styleName);
 
-				if (s.paragraphProps && s.paragraphProps.pageBreakBefore) {
+				if (s && s.paragraphProps && s.paragraphProps.pageBreakBefore) {
 					current.sectProps = sectProps;
 					current = { sectProps: null, elements: [] };
 					result.push(current);

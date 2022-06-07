@@ -1,6 +1,8 @@
 import {
     removeAllElements,
     appendComment,
+    createElement,
+    appendChildren,
     keyBy,
 } from './utils'
 import { renderDefaultStyle } from './render/defaultStyle'
@@ -82,17 +84,22 @@ class HtmlRenderer {
             styleMap,
             footnoteMap,
             endnoteMap,
-            defaultTabSize
+            defaultTabSize,
+            this.htmlDocument
         ).render();
 
-        // if (this.options.inWrapper) {
-        //     bodyContainer.appendChild(this.renderWrapper(sectionElements));
-        // } else {
-        //     appendChildren(bodyContainer, sectionElements);
-        // }
+        if (options.inWrapper) {
+            bodyContainer.appendChild(this.renderWrapper(sectionElements));
+        } else {
+            appendChildren(bodyContainer, sectionElements);
+        }
 
         // this.refreshTabStops();
     }
+
+    renderWrapper(children) {
+		return createElement("div", { className: `${this.className}-wrapper` }, children);
+	}
 }
 
 function arrayToObject(data) {
@@ -106,5 +113,5 @@ function arrayToObject(data) {
 }
 
 // 测试
-new HtmlRenderer(window.htmlDocument)
+new HtmlRenderer(window.document)
 .render(arrayToObject(backJSON.data), document.getElementById('docx'), null, { className: 'docx' })

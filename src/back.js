@@ -6,99 +6,99 @@ export default {
             "props": {
                 "type": "document",
                 "children": [
-                    {
-                        "type": "paragraph",
-                        "children": [
-                            {
-                                "type": "run",
-                                "parent": null,
-                                "children": [
-                                    {
-                                        "type": "text",
-                                        "text": "这是一个用来测试",
-                                        "id": 11
-                                    }
-                                ],
-                                "cssStyle": {},
-                                "id": 4,
-                                "parent_id": 2
-                            },
-                            {
-                                "type": "run",
-                                "parent": null,
-                                "children": [
-                                    {
-                                        "type": "text",
-                                        "text": "nodejs",
-                                        "id": 12
-                                    }
-                                ],
-                                "cssStyle": {},
-                                "id": 5,
-                                "parent_id": 2
-                            },
-                            {
-                                "type": "run",
-                                "parent": null,
-                                "children": [
-                                    {
-                                        "type": "text",
-                                        "text": "解析",
-                                        "id": 13
-                                    }
-                                ],
-                                "cssStyle": {},
-                                "id": 6,
-                                "parent_id": 2
-                            },
-                            {
-                                "type": "run",
-                                "parent": null,
-                                "children": [
-                                    {
-                                        "type": "text",
-                                        "text": "Word",
-                                        "id": 14
-                                    }
-                                ],
-                                "cssStyle": {},
-                                "id": 7,
-                                "parent_id": 2
-                            },
-                            {
-                                "type": "run",
-                                "parent": null,
-                                "children": [
-                                    {
-                                        "type": "text",
-                                        "text": "文档",
-                                        "id": 15
-                                    }
-                                ],
-                                "cssStyle": {},
-                                "id": 8,
-                                "parent_id": 2
-                            },
-                            {
-                                "type": "run",
-                                "parent": null,
-                                "children": [
-                                    {
-                                        "type": "text",
-                                        "text": ".doccccc",
-                                        "id": 16
-                                    }
-                                ],
-                                "cssStyle": {},
-                                "id": 9,
-                                "parent_id": 2
-                            }
-                        ],
-                        "cssStyle": {},
-                        "runProps": {},
-                        "paragraph_text": "这是一个用来测试nodejs解析Word文档.doccccc",
-                        "id": 2
-                    },
+                    // {
+                    //     "type": "paragraph",
+                    //     "children": [
+                    //         {
+                    //             "type": "run",
+                    //             "parent": null,
+                    //             "children": [
+                    //                 {
+                    //                     "type": "text",
+                    //                     "text": "这是一个用来测试",
+                    //                     "id": 11
+                    //                 }
+                    //             ],
+                    //             "cssStyle": {},
+                    //             "id": 4,
+                    //             "parent_id": 2
+                    //         },
+                    //         {
+                    //             "type": "run",
+                    //             "parent": null,
+                    //             "children": [
+                    //                 {
+                    //                     "type": "text",
+                    //                     "text": "nodejs",
+                    //                     "id": 12
+                    //                 }
+                    //             ],
+                    //             "cssStyle": {},
+                    //             "id": 5,
+                    //             "parent_id": 2
+                    //         },
+                    //         {
+                    //             "type": "run",
+                    //             "parent": null,
+                    //             "children": [
+                    //                 {
+                    //                     "type": "text",
+                    //                     "text": "解析",
+                    //                     "id": 13
+                    //                 }
+                    //             ],
+                    //             "cssStyle": {},
+                    //             "id": 6,
+                    //             "parent_id": 2
+                    //         },
+                    //         {
+                    //             "type": "run",
+                    //             "parent": null,
+                    //             "children": [
+                    //                 {
+                    //                     "type": "text",
+                    //                     "text": "Word",
+                    //                     "id": 14
+                    //                 }
+                    //             ],
+                    //             "cssStyle": {},
+                    //             "id": 7,
+                    //             "parent_id": 2
+                    //         },
+                    //         {
+                    //             "type": "run",
+                    //             "parent": null,
+                    //             "children": [
+                    //                 {
+                    //                     "type": "text",
+                    //                     "text": "文档",
+                    //                     "id": 15
+                    //                 }
+                    //             ],
+                    //             "cssStyle": {},
+                    //             "id": 8,
+                    //             "parent_id": 2
+                    //         },
+                    //         {
+                    //             "type": "run",
+                    //             "parent": null,
+                    //             "children": [
+                    //                 {
+                    //                     "type": "text",
+                    //                     "text": ".doccccc",
+                    //                     "id": 16
+                    //                 }
+                    //             ],
+                    //             "cssStyle": {},
+                    //             "id": 9,
+                    //             "parent_id": 2
+                    //         }
+                    //     ],
+                    //     "cssStyle": {},
+                    //     "runProps": {},
+                    //     "paragraph_text": "这是一个用来测试nodejs解析Word文档.doccccc",
+                    //     "id": 2
+                    // },
                     {
                         "type": "paragraph",
                         "children": [
