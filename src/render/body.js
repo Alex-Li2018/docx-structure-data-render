@@ -288,8 +288,7 @@ class RenderBody extends BasePart  {
 			const wrapper = this.createElement(elem.verticalAlign);
 			this.renderChildren(elem, wrapper);
 			result.appendChild(wrapper);
-		}
-		else {
+		} else {
 			this.renderChildren(elem, result);
 		}
 
