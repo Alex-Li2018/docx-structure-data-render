@@ -189,8 +189,8 @@ class RenderBody extends BasePart  {
 		if (!refs) return;
 
 		var ref = (props.titlePage && firstOfSection ? refs.find(x => x.type == "first") : null)
-			?? (page % 2 == 1 ? refs.find(x => x.type == "even") : null)
-			?? refs.find(x => x.type == "default");
+			|| (page % 2 == 1 ? refs.find(x => x.type == "even") : null)
+			|| refs.find(x => x.type == "default");
 
 		var part = ref && this.document.findPartByRelId(ref.id, this.document.documentPart);
 
@@ -218,14 +218,14 @@ class RenderBody extends BasePart  {
 		var result = this.createElement("p");
 
 		const style = this.findStyle(elem.styleName);
-		elem.tabs ??= style?.paragraphProps?.tabs;  //TODO
+		elem.tabs = style.paragraphProps && style.paragraphProps.tabs;  //TODO
 
 		this.renderClass(elem, result);
 		this.renderChildren(elem, result);
 		this.renderStyleValues(elem.cssStyle, result);
 		this.renderCommonProperties(result.style, elem);
 
-		const numbering = elem.numbering ?? style?.paragraphProps?.numbering;
+		const numbering = elem.numbering || (style.paragraphProps && style.paragraphProps.numbering ? style.paragraphProps.numbering : null);
 
 		if (numbering) {
 			result.classList.add(this.numberingClass(numbering.id, numbering.level));
@@ -467,7 +467,7 @@ class RenderBody extends BasePart  {
 	}
 
 	findStyle(styleName) {
-		return styleName && this.styleMap?.[styleName];
+		return styleName && this.styleMap && this.styleMap[styleName];
 	}
 
 	splitBySection(elements) {
@@ -478,7 +478,7 @@ class RenderBody extends BasePart  {
 			if (elem.type == DomType.Paragraph) {
 				const s = this.findStyle((elem).styleName);
 
-				if (s?.paragraphProps?.pageBreakBefore) {
+				if (s.paragraphProps && s.paragraphProps.pageBreakBefore) {
 					current.sectProps = sectProps;
 					current = { sectProps: null, elements: [] };
 					result.push(current);
@@ -496,7 +496,7 @@ class RenderBody extends BasePart  {
 
 				if (this.options.breakPages && p.children) {
 					pBreakIndex = p.children.findIndex(r => {
-						rBreakIndex = r.children?.findIndex(this.isPageBreakElement.bind(this)) ?? -1;
+						rBreakIndex = (r.children || []).findIndex(this.isPageBreakElement.bind(this)) || -1;
 						return rBreakIndex != -1;
 					});
 				}

@@ -23,7 +23,7 @@ export function updateTabStop(elem, tabs, defaultTabSize, pixelToPoint = 72 / 96
     const pbb = p.getBoundingClientRect();
     const pcs = getComputedStyle(p);
 
-	const tabStops = tabs?.length > 0 ? tabs.map(t => ({
+	const tabStops = (tabs || []).length > 0 ? tabs.map(t => ({
 		pos: lengthToPoint(t.position),
 		leader: t.leader,
 		style: t.style

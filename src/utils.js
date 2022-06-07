@@ -46,7 +46,7 @@ export function keyBy(array, by) {
 }
 
 export function escapeClassName(className) {
-	return className?.replace(/[ .]+/g, '-').replace(/[&]+/g, 'and').toLowerCase();
+	return (className || '').replace(/[ .]+/g, '-').replace(/[&]+/g, 'and').toLowerCase();
 }
 
 export function isObject(item) {
@@ -62,7 +62,7 @@ export function mergeDeep(target, ...sources) {
     if (isObject(target) && isObject(source)) {
         for (const key in source) {
             if (isObject(source[key])) {
-                const val = target[key] ?? (target[key] = {});
+                const val = target[key] || (target[key] = {});
                 mergeDeep(val, source[key]);
             } else {
                 target[key] = source[key];

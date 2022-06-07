@@ -1,7 +1,5 @@
 import {
-    createElement,
     removeAllElements,
-    createStyleElement,
     appendComment,
     keyBy,
 } from './utils'

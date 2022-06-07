@@ -152,14 +152,14 @@ class RenderNumbering extends BasePart {
 			return `"counter(${this.numberingCounter(id, lvl)}, ${numformat})"`;
 		});
 
-		return `"${result}${suffMap[suff] ?? ""}"`;
+		return `"${result}${suffMap[suff] || ""}"`;
 	}
 
 	prodessNumberings(numberings) {
 		for (let num of numberings.filter(n => n.pStyleName)) {
 			const style = this.findStyle(num.pStyleName);
 
-			if (style?.paragraphProps?.numbering) {
+			if (style.paragraphProps && style.paragraphProps.numbering) {
 				style.paragraphProps.numbering.level = num.level;
 			}
 		}
