@@ -1,7 +1,7 @@
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
     typeof define === 'function' && define.amd ? define(factory) :
-    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.renderWordDocumentJSON = factory());
+    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.HtmlRender = factory());
 })(this, (function () { 'use strict';
 
     // 创建元素
@@ -219,7 +219,7 @@ section.${c}>article { margin-bottom: auto; }
     			let subStyles = style.styles;
 
     			if (style.linked) {
-    				const linkedStyle = style.linked && this.stylesMap[style.linked];
+    				const linkedStyle = style.linked && this.styleMap[style.linked];
 
     				if (linkedStyle)
     					subStyles = subStyles.concat(linkedStyle.styles);
@@ -786,8 +786,7 @@ section.${c}>article { margin-bottom: auto; }
     			const wrapper = this.createElement(elem.verticalAlign);
     			this.renderChildren(elem, wrapper);
     			result.appendChild(wrapper);
-    		}
-    		else {
+    		} else {
     			this.renderChildren(elem, result);
     		}
 
@@ -1098,7 +1097,7 @@ section.${c}>article { margin-bottom: auto; }
     	}
     }
 
-    class HtmlRenderer {
+    class HtmlRender {
         constructor(htmlDocument) {
             this.htmlDocument = htmlDocument;
         }
@@ -1186,6 +1185,6 @@ section.${c}>article { margin-bottom: auto; }
     	}
     }
 
-    return HtmlRenderer;
+    return HtmlRender;
 
 }));

@@ -1,602 +1,597 @@
 import {
-    createElement,
-	appendChildren
-} from '../utils'
-import DomType from './domType'
-import BasePart from "../basePart";
+  createElement,
+  appendChildren,
+  createSvgElement,
+} from '../utils';
+import DomType from './domType';
+import BasePart from '../basePart';
 
-class RenderBody extends BasePart  {
-    constructor(document, options, styleMap, footnoteMap, endnoteMap, defaultTabSize, htmlDocument) {
-		super()
+class RenderBody extends BasePart {
+  constructor(document, options, styleMap, footnoteMap, endnoteMap, defaultTabSize, htmlDocument) {
+    super();
 
-		this.document = document
-		this.currentPart = null;
-        this.tableVerticalMerges = [];
-        this.currentVerticalMerge = null;
-        this.tableCellPositions = [];
-        this.currentCellPosition = null;
-        
-        this.currentEndnoteIds = [];
-        this.usedHederFooterParts = [];
-        this.currentTabs = [];
-        this.tabsTimeout = 0;
-        this.createElement = createElement;
-		this.options = {
-			breakPages: true,
-			className: "docx",
-			ignoreFonts: false,
-			ignoreHeight: false,
-			ignoreLastRenderedPageBreak: true,
-			ignoreWidth: false,
-			inWrapper: true,
-			renderEndnotes: true,
-			renderFooters: true,
-			renderFootnotes: true,
-			renderHeaders: true,
-			trimXmlDeclaration: true,
-			useBase64URL: false,
-			...options
-		} 
+    this.document = document;
+    this.currentPart = null;
+    this.tableVerticalMerges = [];
+    this.currentVerticalMerge = null;
+    this.tableCellPositions = [];
+    this.currentCellPosition = null;
 
-		this.className = this.options.className || 'docx'
+    this.currentEndnoteIds = [];
+    this.usedHederFooterParts = [];
+    this.currentTabs = [];
+    this.tabsTimeout = 0;
+    this.createElement = createElement;
+    this.options = {
+      breakPages: true,
+      className: 'docx',
+      ignoreFonts: false,
+      ignoreHeight: false,
+      ignoreLastRenderedPageBreak: true,
+      ignoreWidth: false,
+      inWrapper: true,
+      renderEndnotes: true,
+      renderFooters: true,
+      renderFootnotes: true,
+      renderHeaders: true,
+      trimXmlDeclaration: true,
+      useBase64URL: false,
+      ...options,
+    };
 
-		this.styleMap = styleMap
-		this.footnoteMap = footnoteMap
-		this.endnoteMap = endnoteMap
-		this.defaultTabSize = defaultTabSize
+    this.className = this.options.className || 'docx';
 
-		this.htmlDocument = htmlDocument
+    this.styleMap = styleMap;
+    this.footnoteMap = footnoteMap;
+    this.endnoteMap = endnoteMap;
+    this.defaultTabSize = defaultTabSize;
+
+    this.htmlDocument = htmlDocument;
+  }
+
+  render() {
+    const result = [];
+    // 遍历元素处理表格 处理父元素节点
+    this.processElement(this.document);
+    // 分页 一页一个section
+    const sections = this.splitBySection(this.document.children);
+    let prevProps = null;
+
+    for (let i = 0, l = sections.length; i < l; i++) {
+      this.currentFootnoteIds = [];
+
+      const section = sections[i];
+      const props = section.sectProps || this.document.props;
+      // 创建当前页
+      const sectionElement = this.createSection(this.className, props);
+      // 渲染word解析出来的样式
+      this.renderStyleValues(this.document.cssStyle, sectionElement);
+
+      // 页眉页脚
+      this.options.renderHeaders && this.renderHeaderFooter(
+        props.headerRefs,
+        props,
+        result.length,
+        prevProps !== props,
+        sectionElement,
+      );
+
+      const contentElement = this.createElement('article');
+      // 渲染当前页
+      this.renderElements(section.elements, contentElement);
+      sectionElement.appendChild(contentElement);
+
+      if (this.options.renderFootnotes) {
+        this.renderNotes(this.currentFootnoteIds, this.footnoteMap, sectionElement);
+      }
+
+      if (this.options.renderEndnotes && i === l - 1) {
+        this.renderNotes(this.currentEndnoteIds, this.endnoteMap, sectionElement);
+      }
+
+      this.options.renderFooters && this.renderHeaderFooter(
+        props.footerRefs,
+        props,
+        result.length,
+        prevProps !== props,
+        sectionElement,
+      );
+
+      result.push(sectionElement);
+      prevProps = props;
     }
 
-    render() {
-		const result = [];
-		// 遍历元素处理表格 处理父元素节点
-		this.processElement(this.document);
-		// 分页 一页一个section
-		const sections = this.splitBySection(this.document.children);
-		let prevProps = null;
-
-		for (let i = 0, l = sections.length; i < l; i++) {
-			this.currentFootnoteIds = [];
-
-			const section = sections[i];
-			const props = section.sectProps || this.document.props;
-			// 创建当前页
-			const sectionElement = this.createSection(this.className, props);
-			// 渲染word解析出来的样式
-			this.renderStyleValues(this.document.cssStyle, sectionElement);
-
-			// 页眉页脚
-			this.options.renderHeaders && this.renderHeaderFooter(
-				props.headerRefs, 
-				props,
-				result.length, 
-				prevProps != props, 
-				sectionElement
-			);
-
-			var contentElement = this.createElement("article");
-			// 渲染当前页
-			this.renderElements(section.elements, contentElement);
-			sectionElement.appendChild(contentElement);
-
-			if (this.options.renderFootnotes) {
-				this.renderNotes(this.currentFootnoteIds, this.footnoteMap, sectionElement);
-			}
-
-			if (this.options.renderEndnotes && i == l - 1) {
-				this.renderNotes(this.currentEndnoteIds, this.endnoteMap, sectionElement);
-			}
-
-			this.options.renderFooters && this.renderHeaderFooter(props.footerRefs, props,
-				result.length, prevProps != props, sectionElement);
-
-			result.push(sectionElement);
-			prevProps = props;
-		}
-
-		return result;
-	}
-
-    renderStyleValues(style, ouput) {
-		Object.assign(ouput.style, style);
-	}
-
-	renderElements(elems, into) {
-		if (elems == null)
-			return null;
-
-		var result = elems.map(e => this.renderElement(e)).filter(e => e != null);
-
-		if (into)
-			appendChildren(into, result);
-
-		return result;
-	}
-
-	renderElement(elem) {
-		switch (elem.type) {
-			// 段落
-			case DomType.Paragraph:
-				return this.renderParagraph(elem);
-			// 书签开始
-			case DomType.BookmarkStart:
-				return this.renderBookmarkStart(elem);
-			// 书签结束
-			case DomType.BookmarkEnd:
-				return null; //ignore bookmark end
-			// run标签
-			case DomType.Run:
-				return this.renderRun(elem);
-			// table
-			case DomType.Table:
-				return this.renderTable(elem);
-
-			case DomType.Row:
-				return this.renderTableRow(elem);
-
-			case DomType.Cell:
-				return this.renderTableCell(elem);
-			// 超链接
-			case DomType.Hyperlink:
-				return this.renderHyperlink(elem);
-			// 图形
-			case DomType.Drawing:
-				return this.renderDrawing(elem);
-			// 图片
-			case DomType.Image:
-				return this.renderImage(elem);
-			// 文本
-			case DomType.Text:
-				return this.renderText(elem);
+    return result;
+  }
+
+  renderElements(elems, into) {
+    if (elems == null) return null;
+
+    const result = elems.map((e) => this.renderElement(e)).filter((e) => e != null);
+
+    if (into) appendChildren(into, result);
+
+    return result;
+  }
+
+  renderElement(elem) {
+    switch (elem.type) {
+      // 段落
+      case DomType.Paragraph:
+        return this.renderParagraph(elem);
+        // 书签开始
+      case DomType.BookmarkStart:
+        return this.renderBookmarkStart(elem);
+        // 书签结束
+      case DomType.BookmarkEnd:
+        return null; // ignore bookmark end
+        // run标签
+      case DomType.Run:
+        return this.renderRun(elem);
+        // table
+      case DomType.Table:
+        return this.renderTable(elem);
+
+      case DomType.Row:
+        return this.renderTableRow(elem);
+
+      case DomType.Cell:
+        return this.renderTableCell(elem);
+        // 超链接
+      case DomType.Hyperlink:
+        return this.renderHyperlink(elem);
+        // 图形
+      case DomType.Drawing:
+        return this.renderDrawing(elem);
+        // 图片
+      case DomType.Image:
+        return this.renderImage(elem);
+        // 文本
+      case DomType.Text:
+        return this.renderText(elem);
+
+      case DomType.Tab:
+        return this.renderTab(elem);
+
+      case DomType.Symbol:
+        return this.renderSymbol(elem);
+
+      case DomType.Break:
+        return this.renderBreak(elem);
+
+      case DomType.Footer:
+        return this.renderContainer(elem, 'footer');
+
+      case DomType.Header:
+        return this.renderContainer(elem, 'header');
+        // 脚注 尾注
+      case DomType.Footnote:
+      case DomType.Endnote:
+        return this.renderContainer(elem, 'li');
+
+      case DomType.FootnoteReference:
+        return this.renderFootnoteReference(elem);
+
+      case DomType.EndnoteReference:
+        return this.renderEndnoteReference(elem);
+
+      case DomType.NoBreakHyphen:
+        return this.createElement('wbr');
+
+      case DomType.VmlPicture:
+        return this.renderVmlPicture(elem);
+
+      case DomType.VmlShape:
+        return this.renderVmlShape(elem);
+
+      default:
+        break;
+    }
+
+    return null;
+  }
+
+  renderHeaderFooter(refs, props, page, firstOfSection, into) {
+    if (!refs) return;
+
+    const ref = (props.titlePage && firstOfSection ? refs.find((x) => x.type === 'first') : null)
+|| (page % 2 === 1 ? refs.find((x) => x.type === 'even') : null)
+|| refs.find((x) => x.type === 'default');
+
+    const part = ref && this.document.findPartByRelId(ref.id, this.document.documentPart);
+
+    if (part) {
+      this.currentPart = part;
+      if (!this.usedHederFooterParts.includes(part.path)) {
+        this.processElement(part.rootElement);
+        this.usedHederFooterParts.push(part.path);
+      }
+      this.renderElements([part.rootElement], into);
+      this.currentPart = null;
+    }
+  }
+
+  renderNotes(noteIds, notesMap, into) {
+    const notes = noteIds.map((id) => notesMap[id]).filter((x) => x);
 
-			case DomType.Tab:
-				return this.renderTab(elem);
+    if (notes.length > 0) {
+      const result = this.createElement('ol', null, this.renderElements(notes));
+      into.appendChild(result);
+    }
+  }
 
-			case DomType.Symbol:
-				return this.renderSymbol(elem);
+  renderParagraph(elem) {
+    const result = this.createElement('p');
 
-			case DomType.Break:
-				return this.renderBreak(elem);
+    const style = this.findStyle(elem.styleName);
+    elem.tabs = (style && style.paragraphProps && style.paragraphProps.tabs)
+      ? style.paragraphProps.tabs : null; // TODO
 
-			case DomType.Footer:
-				return this.renderContainer(elem, "footer");
+    this.renderClass(elem, result);
+    this.renderChildren(elem, result);
+    this.renderStyleValues(elem.cssStyle, result);
+    this.renderCommonProperties(result.style, elem);
 
-			case DomType.Header:
-				return this.renderContainer(elem, "header");
-			// 脚注 尾注
-			case DomType.Footnote:
-			case DomType.Endnote:
-				return this.renderContainer(elem, "li");
+    const numbering = elem.numbering
+    || ((style && style.paragraphProps && style.paragraphProps.numbering)
+      ? style.paragraphProps.numbering : null);
 
-			case DomType.FootnoteReference:
-				return this.renderFootnoteReference(elem);
+    if (numbering) {
+      result.classList.add(this.numberingClass(numbering.id, numbering.level));
+    }
 
-			case DomType.EndnoteReference:
-				return this.renderEndnoteReference(elem);
+    return result;
+  }
 
-			case DomType.NoBreakHyphen:
-				return this.createElement("wbr");
+  renderClass(input, ouput) {
+    if (input.className) ouput.className = input.className;
 
-			case DomType.VmlPicture:
-				return this.renderVmlPicture(elem);
+    if (input.styleName) ouput.classList.add(this.processStyleName(input.styleName));
+  }
 
-			case DomType.VmlShape:
-				return this.renderVmlShape(elem);
-		}
+  renderChildren(elem, into) {
+    return this.renderElements(elem.children, into);
+  }
 
-		return null;
-	}
+  renderStyleValues(style, ouput) {
+    Object.assign(ouput.style, style);
+  }
 
-    renderHeaderFooter(refs, props, page, firstOfSection, into) {
-		if (!refs) return;
+  renderCommonProperties(style, props) {
+    if (props == null) return;
 
-		var ref = (props.titlePage && firstOfSection ? refs.find(x => x.type == "first") : null)
-			|| (page % 2 == 1 ? refs.find(x => x.type == "even") : null)
-			|| refs.find(x => x.type == "default");
+    if (props.color) {
+      style.color = props.color;
+    }
 
-		var part = ref && this.document.findPartByRelId(ref.id, this.document.documentPart);
+    if (props.fontSize) {
+      style['font-size'] = props.fontSize;
+    }
+  }
 
-		if (part) {
-			this.currentPart = part;
-			if (!this.usedHederFooterParts.includes(part.path)) {
-				this.processElement(part.rootElement);
-				this.usedHederFooterParts.push(part.path);
-			}
-			this.renderElements([part.rootElement], into);
-			this.currentPart = null;
-		}
-	}
+  renderBookmarkStart(elem) {
+    const result = this.createElement('span');
+    result.id = elem.name;
+    return result;
+  }
 
-    renderNotes(noteIds, notesMap, into) {
-		var notes = noteIds.map(id => notesMap[id]).filter(x => x);
+  renderRun(elem) {
+    if (elem.fieldRun) return null;
 
-		if (notes.length > 0) {
-			var result = this.createElement("ol", null, this.renderElements(notes));
-			into.appendChild(result);
-		}
-	}
+    const result = this.createElement('span');
 
-    renderParagraph(elem) {
-		var result = this.createElement("p");
+    if (elem.id) result.id = elem.id;
 
-		const style = this.findStyle(elem.styleName);
-		elem.tabs = style && style.paragraphProps && style.paragraphProps.tabs ? style.paragraphProps.tabs : null;  //TODO
+    this.renderClass(elem, result);
+    this.renderStyleValues(elem.cssStyle, result);
 
-		this.renderClass(elem, result);
-		this.renderChildren(elem, result);
-		this.renderStyleValues(elem.cssStyle, result);
-		this.renderCommonProperties(result.style, elem);
+    if (elem.verticalAlign) {
+      const wrapper = this.createElement(elem.verticalAlign);
+      this.renderChildren(elem, wrapper);
+      result.appendChild(wrapper);
+    } else {
+      this.renderChildren(elem, result);
+    }
 
-		const numbering = elem.numbering || (style && style.paragraphProps && style.paragraphProps.numbering ? style.paragraphProps.numbering : null);
+    return result;
+  }
 
-		if (numbering) {
-			result.classList.add(this.numberingClass(numbering.id, numbering.level));
-		}
+  renderTable(elem) {
+    const result = this.createElement('table');
 
-		return result;
-	}
+    this.tableCellPositions.push(this.currentCellPosition);
+    this.tableVerticalMerges.push(this.currentVerticalMerge);
+    this.currentVerticalMerge = {};
+    this.currentCellPosition = { col: 0, row: 0 };
 
-    renderClass(input, ouput) {
-		if (input.className)
-			ouput.className = input.className;
+    if (elem.columns) result.appendChild(this.renderTableColumns(elem.columns));
 
-		if (input.styleName)
-			ouput.classList.add(this.processStyleName(input.styleName));
-	}
+    this.renderClass(elem, result);
+    this.renderChildren(elem, result);
+    this.renderStyleValues(elem.cssStyle, result);
 
-    renderChildren(elem, into) {
-		return this.renderElements(elem.children, into);
-	}
+    this.currentVerticalMerge = this.tableVerticalMerges.pop();
+    this.currentCellPosition = this.tableCellPositions.pop();
 
-    renderStyleValues(style, ouput) {
-		Object.assign(ouput.style, style);
-	}
+    return result;
+  }
 
-    renderCommonProperties(style, props) {
-		if (props == null)
-			return;
+  renderTableColumns(columns) {
+    const result = this.createElement('colgroup');
 
-		if (props.color) {
-			style["color"] = props.color;
-		}
+    for (const col of columns) {
+      const colElem = this.createElement('col');
 
-		if (props.fontSize) {
-			style["font-size"] = props.fontSize;
-		}
-	}
+      if (col.width) colElem.style.width = col.width;
 
-    renderBookmarkStart(elem) {
-		var result = this.createElement("span");
-		result.id = elem.name;
-		return result;
-	}
+      result.appendChild(colElem);
+    }
 
-    renderRun(elem) {
-		if (elem.fieldRun)
-			return null;
+    return result;
+  }
 
-		const result = this.createElement("span");
+  renderTableRow(elem) {
+    const result = this.createElement('tr');
 
-		if (elem.id)
-			result.id = elem.id;
+    this.currentCellPosition.col = 0;
 
-		this.renderClass(elem, result);
-		this.renderStyleValues(elem.cssStyle, result);
+    this.renderClass(elem, result);
+    this.renderChildren(elem, result);
+    this.renderStyleValues(elem.cssStyle, result);
 
-		if (elem.verticalAlign) {
-			const wrapper = this.createElement(elem.verticalAlign);
-			this.renderChildren(elem, wrapper);
-			result.appendChild(wrapper);
-		} else {
-			this.renderChildren(elem, result);
-		}
+    this.currentCellPosition.row++;
 
-		return result;
-	}
+    return result;
+  }
 
-    renderTable(elem) {
-		let result = this.createElement("table");
+  renderTableCell(elem) {
+    const result = this.createElement('td');
 
-		this.tableCellPositions.push(this.currentCellPosition);
-		this.tableVerticalMerges.push(this.currentVerticalMerge);
-		this.currentVerticalMerge = {};
-		this.currentCellPosition = { col: 0, row: 0 };
+    if (elem.verticalMerge) {
+      const key = this.currentCellPosition.col;
 
-		if (elem.columns)
-			result.appendChild(this.renderTableColumns(elem.columns));
+      if (elem.verticalMerge === 'restart') {
+        this.currentVerticalMerge[key] = result;
+        result.rowSpan = 1;
+      } else if (this.currentVerticalMerge[key]) {
+        this.currentVerticalMerge[key].rowSpan += 1;
+        result.style.display = 'none';
+      }
+    }
 
-		this.renderClass(elem, result);
-		this.renderChildren(elem, result);
-		this.renderStyleValues(elem.cssStyle, result);
+    this.renderClass(elem, result);
+    this.renderChildren(elem, result);
+    this.renderStyleValues(elem.cssStyle, result);
 
-		this.currentVerticalMerge = this.tableVerticalMerges.pop();
-		this.currentCellPosition = this.tableCellPositions.pop();
+    if (elem.span) result.colSpan = elem.span;
 
-		return result;
-	}
+    this.currentCellPosition.col++;
 
-    renderTableColumns(columns) {
-		let result = this.createElement("colgroup");
+    return result;
+  }
 
-		for (let col of columns) {
-			let colElem = this.createElement("col");
+  renderHyperlink(elem) {
+    const result = this.createElement('a');
 
-			if (col.width)
-				colElem.style.width = col.width;
+    this.renderChildren(elem, result);
+    this.renderStyleValues(elem.cssStyle, result);
 
-			result.appendChild(colElem);
-		}
+    if (elem.href) result.href = elem.href;
 
-		return result;
-	}
+    return result;
+  }
 
-	renderTableRow(elem) {
-		let result = this.createElement("tr");
+  renderDrawing(elem) {
+    const result = this.createElement('div');
 
-		this.currentCellPosition.col = 0;
+    result.style.display = 'inline-block';
+    result.style.position = 'relative';
+    result.style.textIndent = '0px';
 
-		this.renderClass(elem, result);
-		this.renderChildren(elem, result);
-		this.renderStyleValues(elem.cssStyle, result);
+    this.renderChildren(elem, result);
+    this.renderStyleValues(elem.cssStyle, result);
 
-		this.currentCellPosition.row++;
+    return result;
+  }
 
-		return result;
-	}
+  renderImage(elem) {
+    const result = this.createElement('img');
 
-	renderTableCell(elem) {
-		let result = this.createElement("td");
+    this.renderStyleValues(elem.cssStyle, result);
 
-		if (elem.verticalMerge) {
-			const key = this.currentCellPosition.col;
+    if (this.document) {
+      this.document.loadDocumentImage(elem.src, this.currentPart).then((x) => {
+        result.src = x;
+      });
+    }
 
-			if (elem.verticalMerge == "restart") {
-				this.currentVerticalMerge[key] = result;
-				result.rowSpan = 1;
-			} else if (this.currentVerticalMerge[key]) {
-				this.currentVerticalMerge[key].rowSpan += 1;
-				result.style.display = "none";
-			}
-		}
+    return result;
+  }
 
-		this.renderClass(elem, result);
-		this.renderChildren(elem, result);
-		this.renderStyleValues(elem.cssStyle, result);
+  renderText(elem) {
+    return this.htmlDocument.createTextNode(elem.text);
+  }
 
-		if (elem.span)
-			result.colSpan = elem.span;
+  renderBreak(elem) {
+    if (elem.break === 'textWrapping') {
+      return this.createElement('br');
+    }
 
-		this.currentCellPosition.col++;
+    return null;
+  }
 
-		return result;
-	}
+  renderSymbol(elem) {
+    const span = this.createElement('span');
+    span.style.fontFamily = elem.font;
+    span.innerHTML = `&#x${elem.char};`;
+    return span;
+  }
 
-    renderHyperlink(elem) {
-		var result = this.createElement("a");
+  renderContainer(elem, tagName) {
+    return this.createElement(tagName, null, this.renderChildren(elem));
+  }
 
-		this.renderChildren(elem, result);
-		this.renderStyleValues(elem.cssStyle, result);
+  renderVmlPicture(elem) {
+    const result = createSvgElement('svg');
+    this.renderChildren(elem, result);
 
-		if (elem.href)
-			result.href = elem.href
+    setTimeout(() => {
+      const bb = result.getBBox();
 
-		return result;
-	}
+      result.setAttribute('width', `${Math.round(bb.width)}`);
+      result.setAttribute('height', `${Math.round(bb.height)}`);
+    });
 
-    renderDrawing(elem) {
-		var result = this.createElement("div");
+    return result;
+  }
 
-		result.style.display = "inline-block";
-		result.style.position = "relative";
-		result.style.textIndent = "0px";
+  renderVmlShape(elem) {
+    if (elem.imagedata) {
+      const image = createSvgElement('image');
 
-		this.renderChildren(elem, result);
-		this.renderStyleValues(elem.cssStyle, result);
+      image.setAttribute('style', elem.cssStyleText);
 
-		return result;
-	}
+      if (this.document) {
+        this.document.loadDocumentImage(elem.imagedata.id, this.currentPart).then((x) => {
+          image.setAttribute('href', x);
+        });
+      }
 
-	renderImage(elem) {
-		let result = this.createElement("img");
+      return image;
+    }
 
-		this.renderStyleValues(elem.cssStyle, result);
+    return null;
+  }
 
-		if (this.document) {
-			this.document.loadDocumentImage(elem.src, this.currentPart).then(x => {
-				result.src = x;
-			});
-		}
+  numberingClass(id, lvl) {
+    return `${this.className}-num-${id}-${lvl}`;
+  }
+
+  findStyle(styleName) {
+    return styleName && this.styleMap && this.styleMap[styleName];
+  }
+
+  splitBySection(elements) {
+    let current = { sectProps: null, elements: [] };
+    const result = [current];
+
+    for (const elem of elements) {
+      if (elem.type === DomType.Paragraph) {
+        const s = this.findStyle((elem).styleName);
+
+        if (s && s.paragraphProps && s.paragraphProps.pageBreakBefore) {
+          current.sectProps = sectProps;
+          current = { sectProps: null, elements: [] };
+          result.push(current);
+        }
+      }
 
-		return result;
-	}
+      current.elements.push(elem);
+
+      if (elem.type === DomType.Paragraph) {
+        const p = elem;
 
-	renderText(elem) {
-		return this.htmlDocument.createTextNode(elem.text);
-	}
+        const sectProps = p.sectionProps;
+        let pBreakIndex = -1;
+        let rBreakIndex = -1;
 
-	renderBreak(elem) {
-		if (elem.break == "textWrapping") {
-			return this.createElement("br");
-		}
+        if (this.options.breakPages && p.children) {
+          pBreakIndex = p.children.findIndex((r) => {
+            rBreakIndex = (r.children || []).findIndex(this.isPageBreakElement.bind(this)) || -1;
+            return rBreakIndex !== -1;
+          });
+        }
 
-		return null;
-	}
+        if (sectProps || pBreakIndex !== -1) {
+          current.sectProps = sectProps;
+          current = { sectProps: null, elements: [] };
+          result.push(current);
+        }
 
-	renderSymbol(elem) {
-		var span = this.createElement("span");
-		span.style.fontFamily = elem.font;
-		span.innerHTML = `&#x${elem.char};`
-		return span;
-	}
+        if (pBreakIndex !== -1) {
+          const breakRun = p.children[pBreakIndex];
+          const splitRun = rBreakIndex < breakRun.children.length - 1;
 
-    renderContainer(elem, tagName) {
-		return this.createElement(tagName, null, this.renderChildren(elem));
-	}
+          if (pBreakIndex < p.children.length - 1 || splitRun) {
+            const { children } = elem;
+            const newParagraph = { ...elem, children: children.slice(pBreakIndex) };
+            elem.children = children.slice(0, pBreakIndex);
+            current.elements.push(newParagraph);
 
-    renderVmlPicture(elem) {
-		var result = createSvgElement("svg");
-		this.renderChildren(elem, result);
+            if (splitRun) {
+              const runChildren = breakRun.children;
+              const newRun = { ...breakRun, children: runChildren.slice(0, rBreakIndex) };
+              elem.children.push(newRun);
+              breakRun.children = runChildren.slice(rBreakIndex);
+            }
+          }
+        }
+      }
+    }
 
-		setTimeout(() => {
-			const bb = result.getBBox();
+    let currentSectProps = null;
 
-			result.setAttribute("width", `${Math.round(bb.width)}`);
-			result.setAttribute("height", `${Math.round(bb.height)}`);
-		});
+    for (let i = result.length - 1; i >= 0; i--) {
+      if (result[i].sectProps == null) {
+        result[i].sectProps = currentSectProps;
+      } else {
+        currentSectProps = result[i].sectProps;
+      }
+    }
 
-		return result;
-	}
+    return result;
+  }
 
-	renderVmlShape(elem) {
-		if (elem.imagedata) {
-			const image = createSvgElement("image");
+  processElement(element) {
+    if (element.children) {
+      for (const e of element.children) {
+        e.parent = element;
 
-			image.setAttribute("style", elem.cssStyleText);
+        if (e.type === DomType.Table) {
+          this.processTable(e);
+        } else {
+          this.processElement(e);
+        }
+      }
+    }
+  }
 
-			if (this.document) {
-				this.document.loadDocumentImage(elem.imagedata.id, this.currentPart).then(x => {
-					image.setAttribute("href", x);
-				});
-			}
+  createSection(className, props) {
+    const elem = this.createElement('section', { className });
 
-			return image;
-		}
-	}
+    if (props) {
+      if (props.pageMargins) {
+        elem.style.paddingLeft = props.pageMargins.left;
+        elem.style.paddingRight = props.pageMargins.right;
+        elem.style.paddingTop = props.pageMargins.top;
+        elem.style.paddingBottom = props.pageMargins.bottom;
+      }
 
-    numberingClass(id, lvl) {
-		return `${this.className}-num-${id}-${lvl}`;
-	}
+      if (props.pageSize) {
+        if (!this.options.ignoreWidth) elem.style.width = props.pageSize.width;
+        if (!this.options.ignoreHeight) elem.style.minHeight = props.pageSize.height;
+      }
 
-	findStyle(styleName) {
-		return styleName && this.styleMap && this.styleMap[styleName];
-	}
+      if (props.columns && props.columns.numberOfColumns) {
+        elem.style.columnCount = `${props.columns.numberOfColumns}`;
+        elem.style.columnGap = props.columns.space;
 
-	splitBySection(elements) {
-		var current = { sectProps: null, elements: [] };
-		var result = [current];
+        if (props.columns.separator) {
+          elem.style.columnRule = '1px solid black';
+        }
+      }
+    }
 
-		for (let elem of elements) {
-			if (elem.type == DomType.Paragraph) {
-				const s = this.findStyle((elem).styleName);
+    return elem;
+  }
 
-				if (s && s.paragraphProps && s.paragraphProps.pageBreakBefore) {
-					current.sectProps = sectProps;
-					current = { sectProps: null, elements: [] };
-					result.push(current);
-				}
-			}
-
-			current.elements.push(elem);
+  isPageBreakElement(elem) {
+    if (elem.type !== DomType.Break) return false;
 
-			if (elem.type == DomType.Paragraph) {
-				const p = elem;
-
-				var sectProps = p.sectionProps;
-				var pBreakIndex = -1;
-				var rBreakIndex = -1;
+    if (elem.break === 'lastRenderedPageBreak') return !this.options.ignoreLastRenderedPageBreak;
 
-				if (this.options.breakPages && p.children) {
-					pBreakIndex = p.children.findIndex(r => {
-						rBreakIndex = (r.children || []).findIndex(this.isPageBreakElement.bind(this)) || -1;
-						return rBreakIndex != -1;
-					});
-				}
-
-				if (sectProps || pBreakIndex != -1) {
-					current.sectProps = sectProps;
-					current = { sectProps: null, elements: [] };
-					result.push(current);
-				}
-
-				if (pBreakIndex != -1) {
-					let breakRun = p.children[pBreakIndex];
-					let splitRun = rBreakIndex < breakRun.children.length - 1;
-
-					if (pBreakIndex < p.children.length - 1 || splitRun) {
-						var children = elem.children;
-						var newParagraph = { ...elem, children: children.slice(pBreakIndex) };
-						elem.children = children.slice(0, pBreakIndex);
-						current.elements.push(newParagraph);
-
-						if (splitRun) {
-							let runChildren = breakRun.children;
-							let newRun = { ...breakRun, children: runChildren.slice(0, rBreakIndex) };
-							elem.children.push(newRun);
-							breakRun.children = runChildren.slice(rBreakIndex);
-						}
-					}
-				}
-			}
-		}
-
-		let currentSectProps = null;
-
-		for (let i = result.length - 1; i >= 0; i--) {
-			if (result[i].sectProps == null) {
-				result[i].sectProps = currentSectProps;
-			} else {
-				currentSectProps = result[i].sectProps
-			}
-		}
-
-		return result;
-	}
-
-	processElement(element) {
-		if (element.children) {
-			for (var e of element.children) {
-				e.parent = element;
-
-				if (e.type == DomType.Table) {
-					this.processTable(e);
-				} else {
-					this.processElement(e);
-				}
-			}
-		}
-	}
-
-    createSection(className, props) {
-		var elem = this.createElement("section", { className });
-
-		if (props) {
-			if (props.pageMargins) {
-				elem.style.paddingLeft = props.pageMargins.left;
-				elem.style.paddingRight = props.pageMargins.right;
-				elem.style.paddingTop = props.pageMargins.top;
-				elem.style.paddingBottom = props.pageMargins.bottom;
-			}
-
-			if (props.pageSize) {
-				if (!this.options.ignoreWidth)
-					elem.style.width = props.pageSize.width;
-				if (!this.options.ignoreHeight)
-					elem.style.minHeight = props.pageSize.height;
-			}
-
-			if (props.columns && props.columns.numberOfColumns) {
-				elem.style.columnCount = `${props.columns.numberOfColumns}`;
-				elem.style.columnGap = props.columns.space;
-
-				if (props.columns.separator) {
-					elem.style.columnRule = "1px solid black";
-				}
-			}
-		}
-
-		return elem;
-	}
-
-	isPageBreakElement(elem) {
-		if (elem.type != DomType.Break)
-			return false;
-
-		if (elem.break == "lastRenderedPageBreak")
-			return !this.options.ignoreLastRenderedPageBreak;
-
-		return elem.break == "page";
-	}
+    return elem.break === 'page';
+  }
 }
 
-export default RenderBody
+export default RenderBody;

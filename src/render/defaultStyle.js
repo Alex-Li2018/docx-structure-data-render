@@ -1,11 +1,12 @@
 // css 变量
 import {
-    createStyleElement,
-} from '../utils'
+  createStyleElement,
+} from '../utils';
 
+// eslint-disable-next-line import/prefer-default-export
 export function renderDefaultStyle(className) {
-    const c = className;
-    const styleText = `
+  const c = className;
+  const styleText = `
 .${c}-wrapper { background: gray; padding: 30px; padding-bottom: 0px; display: flex; flex-flow: column; align-items: center; } 
 .${c}-wrapper>section.${c} { background: white; box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); margin-bottom: 30px; }
 .${c} { color: black; }
@@ -18,5 +19,5 @@ section.${c}>article { margin-bottom: auto; }
 .${c} a { color: inherit; text-decoration: inherit; }
 `;
 
-    return createStyleElement(styleText);
+  return createStyleElement(styleText);
 }
