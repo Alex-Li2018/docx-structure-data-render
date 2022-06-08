@@ -474,12 +474,13 @@ class RenderBody extends BasePart {
   splitBySection(elements) {
     let current = { sectProps: null, elements: [] };
     const result = [current];
+    let sectProps = null;
 
     for (const elem of elements) {
       if (elem.type === DomType.Paragraph) {
-        const s = this.findStyle((elem).styleName);
+        const s = this.findStyle(elem.styleName);
 
-        if (s && s.paragraphProps && s.paragraphProps.pageBreakBefore) {
+        if (s?.paragraphProps?.pageBreakBefore) {
           current.sectProps = sectProps;
           current = { sectProps: null, elements: [] };
           result.push(current);
@@ -491,13 +492,13 @@ class RenderBody extends BasePart {
       if (elem.type === DomType.Paragraph) {
         const p = elem;
 
-        const sectProps = p.sectionProps;
+        sectProps = p.sectionProps;
         let pBreakIndex = -1;
         let rBreakIndex = -1;
 
         if (this.options.breakPages && p.children) {
           pBreakIndex = p.children.findIndex((r) => {
-            rBreakIndex = (r.children || []).findIndex(this.isPageBreakElement.bind(this)) || -1;
+            rBreakIndex = r.children?.findIndex(this.isPageBreakElement.bind(this)) ?? -1;
             return rBreakIndex !== -1;
           });
         }

@@ -25,6 +25,7 @@ export default class HtmlRender {
      * @param {*} options 选项
      */
   render(document, bodyContainer, styleContainer, options) {
+    // eslint-disable-next-line no-void
     if (styleContainer === void 0) {
       styleContainer = null;
     }
