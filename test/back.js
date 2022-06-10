@@ -40,6 +40,12 @@ export default {
           fontSize: '14.00pt',
         },
         paragraph_text: '《货物买卖合同》',
+        label: [
+          {
+            entity: '合同名称',
+            value: '《货物买卖合同》',
+          },
+        ],
         id: 3,
       }, {
         type: 'paragraph',
@@ -138,6 +144,12 @@ export default {
           fontSize: '14.00pt',
         },
         paragraph_text: '甲      方：湖北福星惠誉有限公司',
+        label: [
+          {
+            entity: '甲方',
+            value: '湖北福星惠誉有限公司',
+          },
+        ],
         id: 5,
       }, {
         type: 'paragraph',
@@ -238,6 +250,12 @@ export default {
           fontSize: '14.00pt',
         },
         paragraph_text: '乙      方：大井集团股份有限公司',
+        label: [
+          {
+            entity: '乙方',
+            value: '大井集团股份有限公司',
+          },
+        ],
         id: 6,
       }, {
         type: 'paragraph',
@@ -278,6 +296,12 @@ export default {
           fontSize: '14.00pt',
         },
         paragraph_text: '合同 编号：FXHB202008001',
+        label: [
+          {
+            entity: '合同编号',
+            value: 'FXHB202008001',
+          },
+        ],
         id: 7,
       }, {
         type: 'paragraph',
