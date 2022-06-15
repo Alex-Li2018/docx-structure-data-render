@@ -870,7 +870,10 @@ section.${c}>article { margin-bottom: auto; }
 
       this.renderClass(elem, result);
       this.renderChildren(elem, result);
-      this.renderStyleValues(elem.cssStyle, result);
+      this.renderStyleValues({
+        display: 'flex',
+        ...elem.cssStyle,
+      }, result);
       this.renderCommonProperties(result.style, elem);
 
       const numbering = elem.numbering
@@ -1185,45 +1188,126 @@ section.${c}>article { margin-bottom: auto; }
     }
 
     processLabelElement(element) {
+      // 定义变化 抽取的实体与tree节点之间的关系
+      const flag = {
+        // 全等
+        equal: 0,
+        // 组合
+        combination: 1,
+        // 分割
+        segmentation: 2,
+      };
+
+      // 遍历paragraph 获取所有的text节点
+      const traverseParagraph = (node) => {
+        const arrRun = [];
+
+        if (node.children) {
+          for (let i = 0; i < node.children.length; i++) {
+            const e = node.children[i];
+
+            if (e.type === DomType.Run) {
+              arrRun.push({
+                runElement: e,
+                // TODO: 假定一个run下只有一个text
+                text: e.children.map((item) => item.text).toString(),
+              });
+            }
+          }
+        }
+
+        return arrRun;
+      };
+
+      // 判断是哪一个类型
+      const judgeChangeType = (label, runArr) => {
+        for (let j = 0; j < label.length; j++) {
+          const { entity, value } = label[j];
+          const index = this.labelEntityArr.findIndex((item) => item === entity);
+          const background = getColors(
+            index === -1 ? this.labelEntityArr.push(entity) - 1 : index,
+          );
+
+          for (let i = 0; i < runArr.length; i++) {
+            const { text } = runArr[i];
+
+            if (text === value) {
+              // equal
+              runArr[i].is_select = true;
+              runArr[i].entity = entity;
+              runArr[i].flag = flag.equal;
+              runArr[i].background = background;
+              break;
+            } else if (value.includes(text)) {
+              runArr[i].is_select = true;
+              runArr[i].entity = entity;
+              runArr[i].flag = flag.combination;
+              runArr[i].background = background;
+            } else if (text.includes(value)) {
+              runArr[i].is_select = true;
+              runArr[i].entity = entity;
+              runArr[i].flag = flag.segmentation;
+              runArr[i].background = background;
+            }
+          }
+        }
+      };
+
+      // 处理run节点的数据
+      const handlerRunNode = (runArr) => {
+        const arr = [];
+        const combinationIndex = [];
+        const combinationArr = [];
+
+        for (let i = 0; i < runArr.length; i++) {
+          if (runArr[i].flag === flag.equal) {
+            arr.push({
+              children: [runArr[i].runElement],
+              cssStyle: {
+                background: runArr[i].background,
+              },
+              type: 'run',
+            });
+          } else if (runArr[i].flag === flag.combination) {
+            combinationArr.push(runArr[i]);
+            if (combinationIndex.length === 0) {
+              combinationIndex.push(i);
+            } else {
+              const last = combinationIndex[combinationIndex.length - 1];
+              if (i - last === 1) {
+                combinationIndex.push(i);
+              } else {
+                combinationIndex.splice(combinationIndex.length - 1, 1, i);
+              }
+            }
+            arr.push(runArr[i].runElement);
+          } else {
+            arr.push(runArr[i].runElement);
+          }
+        }
+
+        if (combinationIndex.length) {
+          arr.splice(combinationIndex[0], combinationIndex.length, {
+            children: combinationArr.map((item) => item.runElement),
+            cssStyle: {
+              background: combinationArr[0].background,
+            },
+            type: 'run',
+          });
+        }
+
+        return arr;
+      };
+
       if (element.children) {
         for (const e of element.children) {
-          const labels = element.label;
+          if (e.type === 'paragraph' && e.label && e.label.length) {
+            const runArr = traverseParagraph(e);
+            judgeChangeType(e.label, runArr);
+            const newRunArr = handlerRunNode(runArr);
 
-          if (e.type === DomType.Run && labels && labels.length) {
-            const childrenTemp = [];
-
-            e.children.forEach((item) => {
-              const obj = {
-                children: [],
-              };
-              const textAllMatch = labels.filter((_) => _.value.trim() === item.text.trim());
-              const arr = labels.filter((_) => _.value.includes(e.text));
-
-              // 全部匹配
-              if (textAllMatch.length) {
-                obj.labelEntity = textAllMatch[0].entity;
-
-                const index = labels.findIndex((_) => _ === item.labelEntity);
-
-                obj.cssStyle = {
-                  color: getColors(
-                    index === -1 ? this.labelEntityArr.push(item.labelEntity) - 1 : index,
-                  ),
-                };
-                obj.type = 'run';
-                obj.children.push(item);
-
-                childrenTemp.push(obj);
-              } else if (arr.length) {
-                console.log(item);
-              } else {
-                childrenTemp.push(item);
-              }
-            });
-
-            e.children = childrenTemp;
-          } else {
-            this.processLabelElement(e);
+            e.children = newRunArr;
+            console.log(runArr, newRunArr);
           }
         }
       }

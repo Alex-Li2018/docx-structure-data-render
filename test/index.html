@@ -75,7 +75,7 @@
                         label: [{
                             entity: '合同名称',
                             value: '《货物买卖合同》',
-                        }, ],
+                        }],
                         id: 3,
                     }, {
                         type: 'paragraph',
@@ -2672,6 +2672,10 @@
                         styleName: 'a3',
                         runProps: {},
                         paragraph_text: '第七条 提出异议的时间和方法：',
+                        label: [{
+                            entity: '提出异议',
+                            value: '提出异议',
+                        }],
                         id: 42,
                     }, {
                         type: 'paragraph',
@@ -3865,7 +3869,8 @@
             .render(
                 arrayToObject(mock.data),
                 document.getElementById('docx'),
-                null, {
+                null, 
+                {
                     className: 'docx'
                 }
             )
