@@ -237,7 +237,6 @@ class RenderBody extends BasePart {
     this.renderClass(elem, result);
     this.renderChildren(elem, result);
     this.renderStyleValues({
-      display: 'flex',
       ...elem.cssStyle,
     }, result);
     this.renderCommonProperties(result.style, elem);
@@ -599,19 +598,17 @@ class RenderBody extends BasePart {
 
           if (text === value) {
             // equal
-            runArr[i].is_select = true;
             runArr[i].entity = entity;
             runArr[i].flag = flag.equal;
             runArr[i].background = background;
             break;
           } else if (value.includes(text)) {
-            runArr[i].is_select = true;
             runArr[i].entity = entity;
             runArr[i].flag = flag.combination;
             runArr[i].background = background;
           } else if (text.includes(value)) {
-            runArr[i].is_select = true;
             runArr[i].entity = entity;
+            runArr[i].value = value;
             runArr[i].flag = flag.segmentation;
             runArr[i].background = background;
           }
@@ -622,7 +619,6 @@ class RenderBody extends BasePart {
     // 处理run节点的数据
     const handlerRunNode = (runArr) => {
       const arr = [];
-      const segmentationArr = [];
       const combinationIndex = [];
       const combinationArr = [];
 
@@ -648,6 +644,40 @@ class RenderBody extends BasePart {
             }
           }
           arr.push(runArr[i].runElement);
+        } else if (runArr[i].flag === flag.segmentation) {
+          // 按照字符分割
+          const {
+            background,
+            runElement,
+            text,
+            value,
+          } = runArr[i];
+
+          const textArr = [];
+          const startIndex = text.indexOf(value);
+          textArr.push(text.substring(0, startIndex));
+          textArr.push(text.substring(startIndex, startIndex + value.length));
+          textArr.push(text.substring(startIndex + value.length + 1));
+
+          textArr.filter((item) => !!item).forEach((item) => {
+            const obj = {
+              children: [
+                {
+                  text: item,
+                  type: 'text',
+                },
+              ],
+              cssStyle: {
+                ...runElement.cssStyle,
+              },
+              type: 'run',
+            };
+
+            if (item === value) {
+              obj.cssStyle.background = background;
+            }
+            arr.push(obj);
+          });
         } else {
           arr.push(runArr[i].runElement);
         }
@@ -674,7 +704,6 @@ class RenderBody extends BasePart {
           const newRunArr = handlerRunNode(runArr);
 
           e.children = newRunArr;
-          console.log(runArr, newRunArr);
         }
       }
     }
