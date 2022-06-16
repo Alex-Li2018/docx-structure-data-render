@@ -575,7 +575,7 @@ class RenderBody extends BasePart {
             arrRun.push({
               runElement: e,
               // TODO: 假定一个run下只有一个text
-              text: e.children.map((item) => item.text).toString(),
+              text: e.children.filter((item) => item.type === 'text').map((item) => item.text).toString(),
             });
           }
         }
@@ -586,32 +586,29 @@ class RenderBody extends BasePart {
 
     // 判断是哪一个类型
     const judgeChangeType = (label, runArr) => {
-      for (let j = 0; j < label.length; j++) {
-        const { entity, value } = label[j];
-        const index = this.labelEntityArr.findIndex((item) => item === entity);
-        const background = getColors(
-          index === -1 ? this.labelEntityArr.push(entity) - 1 : index,
-        );
+      const { entity, value } = label;
+      const index = this.labelEntityArr.findIndex((item) => item === entity);
+      const background = getColors(
+        index === -1 ? this.labelEntityArr.push(entity) - 1 : index,
+      );
 
-        for (let i = 0; i < runArr.length; i++) {
-          const { text } = runArr[i];
+      for (let i = 0; i < runArr.length; i++) {
+        const { text } = runArr[i];
 
-          if (text === value) {
-            // equal
-            runArr[i].entity = entity;
-            runArr[i].flag = flag.equal;
-            runArr[i].background = background;
-            break;
-          } else if (value.includes(text)) {
-            runArr[i].entity = entity;
-            runArr[i].flag = flag.combination;
-            runArr[i].background = background;
-          } else if (text.includes(value)) {
-            runArr[i].entity = entity;
-            runArr[i].value = value;
-            runArr[i].flag = flag.segmentation;
-            runArr[i].background = background;
-          }
+        if (text === value) {
+          // equal
+          runArr[i].entity = entity;
+          runArr[i].flag = flag.equal;
+          runArr[i].background = background;
+        } else if (value.includes(text)) {
+          runArr[i].entity = entity;
+          runArr[i].flag = flag.combination;
+          runArr[i].background = background;
+        } else if (text.includes(value)) {
+          runArr[i].entity = entity;
+          runArr[i].value = value;
+          runArr[i].flag = flag.segmentation;
+          runArr[i].background = background;
         }
       }
     };
@@ -700,8 +697,12 @@ class RenderBody extends BasePart {
       for (const e of element.children) {
         if (e.type === 'paragraph' && e.label && e.label.length) {
           const runArr = traverseParagraph(e);
-          judgeChangeType(e.label, runArr);
-          const newRunArr = handlerRunNode(runArr);
+          let newRunArr = [];
+          // 处理多标签的问题
+          for (const label of e.label) {
+            judgeChangeType(label, runArr);
+            newRunArr = handlerRunNode(runArr);
+          }
 
           e.children = newRunArr;
         }
