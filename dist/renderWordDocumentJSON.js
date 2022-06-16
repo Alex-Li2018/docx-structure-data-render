@@ -1225,6 +1225,7 @@ section.${c}>article { margin-bottom: auto; }
         const background = getColors(
           index === -1 ? this.labelEntityArr.push(entity) - 1 : index,
         );
+        let combinationText = value;
 
         for (let i = 0; i < runArr.length; i++) {
           const { text } = runArr[i];
@@ -1234,11 +1235,15 @@ section.${c}>article { margin-bottom: auto; }
             runArr[i].entity = entity;
             runArr[i].flag = flag.equal;
             runArr[i].background = background;
-          } else if (value.includes(text)) {
+          } else if (combinationText.startsWith(text)) {
+            // combination
             runArr[i].entity = entity;
             runArr[i].flag = flag.combination;
             runArr[i].background = background;
+            runArr[i].entityText = value;
+            combinationText = combinationText.substring(text.length);
           } else if (text.includes(value)) {
+            // segmentation
             runArr[i].entity = entity;
             runArr[i].value = value;
             runArr[i].flag = flag.segmentation;
@@ -1250,8 +1255,8 @@ section.${c}>article { margin-bottom: auto; }
       // 处理run节点的数据
       const handlerRunNode = (runArr) => {
         const arr = [];
-        const combinationIndex = [];
         const combinationArr = [];
+        const combinationIndex = [];
 
         for (let i = 0; i < runArr.length; i++) {
           if (runArr[i].flag === flag.equal) {
@@ -1264,16 +1269,7 @@ section.${c}>article { margin-bottom: auto; }
             });
           } else if (runArr[i].flag === flag.combination) {
             combinationArr.push(runArr[i]);
-            if (combinationIndex.length === 0) {
-              combinationIndex.push(i);
-            } else {
-              const last = combinationIndex[combinationIndex.length - 1];
-              if (i - last === 1) {
-                combinationIndex.push(i);
-              } else {
-                combinationIndex.splice(combinationIndex.length - 1, 1, i);
-              }
-            }
+            combinationIndex.push(i);
             arr.push(runArr[i].runElement);
           } else if (runArr[i].flag === flag.segmentation) {
             // 按照字符分割
@@ -1315,12 +1311,19 @@ section.${c}>article { margin-bottom: auto; }
         }
 
         if (combinationIndex.length) {
-          arr.splice(combinationIndex[0], combinationIndex.length, {
+          const runElement = {
             children: combinationArr.map((item) => item.runElement),
             cssStyle: {
               background: combinationArr[0].background,
             },
             type: 'run',
+          };
+          arr.splice(combinationIndex[0], combinationIndex.length, runElement);
+
+          // 修改runArr
+          runArr.splice(combinationIndex[0], combinationIndex.length, {
+            runElement,
+            text: combinationArr[0].entityText,
           });
         }
 
