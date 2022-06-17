@@ -644,6 +644,8 @@ section.${c}>article { margin-bottom: auto; }
     Instruction: 'instruction',
     VmlPicture: 'vmlPicture',
     VmlShape: 'vmlShape',
+    // 渲染render
+    renderRun: 'renderRun',
   };
 
   class RenderBody extends BasePart {
@@ -763,68 +765,57 @@ section.${c}>article { margin-bottom: auto; }
         // 段落
         case DomType.Paragraph:
           return this.renderParagraph(elem);
-          // 书签开始
+        // 书签开始
         case DomType.BookmarkStart:
           return this.renderBookmarkStart(elem);
-          // 书签结束
+        // 书签结束
         case DomType.BookmarkEnd:
           return null; // ignore bookmark end
-          // run标签
+        // run标签
         case DomType.Run:
+        case DomType.renderRun:
           return this.renderRun(elem);
-          // table
+        // table
         case DomType.Table:
           return this.renderTable(elem);
-
         case DomType.Row:
           return this.renderTableRow(elem);
-
         case DomType.Cell:
           return this.renderTableCell(elem);
-          // 超链接
+        // 超链接
         case DomType.Hyperlink:
           return this.renderHyperlink(elem);
-          // 图形
+        // 图形
         case DomType.Drawing:
           return this.renderDrawing(elem);
-          // 图片
+        // 图片
         case DomType.Image:
           return this.renderImage(elem);
-          // 文本
+        // 文本
         case DomType.Text:
           return this.renderText(elem);
-
         case DomType.Tab:
           return this.renderTab(elem);
-
         case DomType.Symbol:
           return this.renderSymbol(elem);
-
         case DomType.Break:
           return this.renderBreak(elem);
-
         case DomType.Footer:
           return this.renderContainer(elem, 'footer');
-
         case DomType.Header:
           return this.renderContainer(elem, 'header');
-          // 脚注 尾注
+        // 脚注 尾注
         case DomType.Footnote:
         case DomType.Endnote:
           return this.renderContainer(elem, 'li');
-
         case DomType.FootnoteReference:
           return this.renderFootnoteReference(elem);
-
         case DomType.EndnoteReference:
           return this.renderEndnoteReference(elem);
-
         case DomType.NoBreakHyphen:
           return this.createElement('wbr');
-
         case DomType.VmlPicture:
           return this.renderVmlPicture(elem);
-
         case DomType.VmlShape:
           return this.renderVmlShape(elem);
       }
@@ -1219,12 +1210,17 @@ section.${c}>article { margin-bottom: auto; }
       };
 
       // 判断是哪一个类型
-      const judgeChangeType = (label, runArr) => {
+      const handlerRunNode = (label, runArr) => {
+        const arr = [];
         const { entity, value } = label;
         const index = this.labelEntityArr.findIndex((item) => item === entity);
         const background = getColors(
           index === -1 ? this.labelEntityArr.push(entity) - 1 : index,
         );
+        const combinationArr = [];
+        const combinationIndex = [];
+        const segmentationArr = [];
+
         let combinationText = value;
 
         for (let i = 0; i < runArr.length; i++) {
@@ -1232,54 +1228,31 @@ section.${c}>article { margin-bottom: auto; }
 
           if (text === value) {
             // equal
-            runArr[i].entity = entity;
-            runArr[i].flag = flag.equal;
-            runArr[i].background = background;
+            runArr[i].runElement = {
+              children: runArr[i].runElement.children,
+              cssStyle: {
+                ...runArr[i].cssStyle,
+                background,
+              },
+              data: {
+                entity,
+                value,
+              },
+              type: 'run',
+            };
+            arr.push(runArr[i].runElement);
           } else if (combinationText.startsWith(text)) {
             // combination
             runArr[i].entity = entity;
             runArr[i].flag = flag.combination;
             runArr[i].background = background;
-            runArr[i].entityText = value;
-            combinationText = combinationText.substring(text.length);
-          } else if (text.includes(value)) {
-            // segmentation
-            runArr[i].entity = entity;
             runArr[i].value = value;
-            runArr[i].flag = flag.segmentation;
-            runArr[i].background = background;
-          }
-        }
-      };
-
-      // 处理run节点的数据
-      const handlerRunNode = (runArr) => {
-        const arr = [];
-        const combinationArr = [];
-        const combinationIndex = [];
-
-        for (let i = 0; i < runArr.length; i++) {
-          if (runArr[i].flag === flag.equal) {
-            arr.push({
-              children: [runArr[i].runElement],
-              cssStyle: {
-                background: runArr[i].background,
-              },
-              type: 'run',
-            });
-          } else if (runArr[i].flag === flag.combination) {
+            combinationText = combinationText.substring(text.length);
             combinationArr.push(runArr[i]);
             combinationIndex.push(i);
             arr.push(runArr[i].runElement);
-          } else if (runArr[i].flag === flag.segmentation) {
-            // 按照字符分割
-            const {
-              background,
-              runElement,
-              text,
-              value,
-            } = runArr[i];
-
+          } else if (text.includes(value)) {
+            // segmentation
             const textArr = [];
             const startIndex = text.indexOf(value);
             textArr.push(text.substring(0, startIndex));
@@ -1288,6 +1261,11 @@ section.${c}>article { margin-bottom: auto; }
 
             textArr.filter((item) => !!item).forEach((item) => {
               const obj = {
+                index: i,
+                text: item,
+              };
+
+              const runElement = {
                 children: [
                   {
                     text: item,
@@ -1295,35 +1273,53 @@ section.${c}>article { margin-bottom: auto; }
                   },
                 ],
                 cssStyle: {
-                  ...runElement.cssStyle,
+                  // eslint-disable-next-line max-len
+                  ...(runArr[i].runElement && runArr[i].runElement.cssStyle ? runArr[i].runElement.cssStyle : {}),
+                },
+                data: {
+                  entity,
+                  value,
                 },
                 type: 'run',
               };
 
               if (item === value) {
-                obj.cssStyle.background = background;
+                runElement.cssStyle.background = background;
               }
-              arr.push(obj);
+
+              obj.runElement = runElement;
+
+              segmentationArr.push(obj);
+
+              arr.push(runElement);
             });
           } else {
             arr.push(runArr[i].runElement);
           }
         }
 
+        // 修改runArr
+        // eslint-disable-next-line max-len
+        segmentationArr.length && runArr.splice(segmentationArr[0].index, segmentationArr.length, ...segmentationArr);
+        // 处理合并节点
         if (combinationIndex.length) {
           const runElement = {
             children: combinationArr.map((item) => item.runElement),
             cssStyle: {
               background: combinationArr[0].background,
             },
-            type: 'run',
+            data: {
+              value: combinationArr[0].value,
+              entity: combinationArr[0].entity,
+            },
+            type: 'renderRun',
           };
           arr.splice(combinationIndex[0], combinationIndex.length, runElement);
 
           // 修改runArr
           runArr.splice(combinationIndex[0], combinationIndex.length, {
             runElement,
-            text: combinationArr[0].entityText,
+            text: combinationArr[0].value,
           });
         }
 
@@ -1337,8 +1333,7 @@ section.${c}>article { margin-bottom: auto; }
             let newRunArr = [];
             // 处理多标签的问题
             for (const label of e.label) {
-              judgeChangeType(label, runArr);
-              newRunArr = handlerRunNode(runArr);
+              newRunArr = handlerRunNode(label, runArr);
             }
 
             e.children = newRunArr;

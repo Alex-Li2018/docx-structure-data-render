@@ -26,6 +26,8 @@ const DomType = {
   Instruction: 'instruction',
   VmlPicture: 'vmlPicture',
   VmlShape: 'vmlShape',
+  // 渲染render
+  renderRun: 'renderRun',
 };
 
 export default DomType;
