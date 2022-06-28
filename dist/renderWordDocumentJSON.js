@@ -669,7 +669,7 @@ section.${c}>article { margin-bottom: auto; }
         className: 'docx',
         ignoreFonts: false,
         ignoreHeight: false,
-        ignoreLastRenderedPageBreak: true,
+        ignoreLastRenderedPageBreak: false,
         ignoreWidth: false,
         inWrapper: true,
         renderEndnotes: true,
