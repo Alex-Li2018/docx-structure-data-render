@@ -1257,7 +1257,7 @@ section.${c}>article { margin-bottom: auto; }
             const startIndex = text.indexOf(value);
             textArr.push(text.substring(0, startIndex));
             textArr.push(text.substring(startIndex, startIndex + value.length));
-            textArr.push(text.substring(startIndex + value.length + 1));
+            textArr.push(text.substring(startIndex + value.length));
 
             textArr.filter((item) => !!item).forEach((item) => {
               const obj = {
